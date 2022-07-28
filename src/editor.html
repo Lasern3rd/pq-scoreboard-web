@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>pq scoreboard editor</title>
+    <link rel="stylesheet" href="base.css" type="text/css">
+    <link rel="stylesheet" href="editor.css" type="text/css">
+    <script src="editor.js" type="text/javascript" defer></script>
+  </head>
+  <body style="padding: 20px;">
+
+    <!-- table -->
+    <div>
+      <table id="editor_table">
+      </table>
+    </div>
+
+    <!-- bottom bar -->
+    <div class="bottomBar">
+      <input type="button" value="add team" class="secondaryBottomBarButton" onclick="showAddTeamWindow()">
+      <input type="button" value="add category" class="secondaryBottomBarButton" onclick="showAddCategoryWindow()">
+      <input type="button" value="clear data" class="secondaryBottomBarButton" onclick="clearData()">
+      <input type="button" value="show results" class="primaryBottomBarButton" onclick="showResults()">
+      <input type="button" value="test" class="primaryBottomBarButton" onclick="loadDataFromLocalStorage()">
+    </div>
+
+    <!-- windows -->
+    <div id="window_background_overlay" class="windowBackgroundOverlay"></div>
+
+    <div id="add_team_window" class="window">
+      <div class="windowTitle">add team</div>
+      <div class="windowContent">
+        <input id="add_team_edit_text" type="text" value="" placeholder="team name..." class="windowEditText">
+      </div>
+      <div class="windowContent">
+        <input type="button" value="cancel" class="secondaryWindowButton" onclick="closeAddTeamWindow(false)">
+        <input type="button" value="ok" class="primaryWindowButton" onclick="closeAddTeamWindow(true)">
+      </div>
+    </div>
+
+    <div id="add_category_window" class="window">
+      <div class="windowTitle">add category</div>
+      <div class="windowContent">
+        <input id="add_category_edit_text" type="text" value="" placeholder="category name..." class="windowEditText">
+      </div>
+      <div class="windowContent">
+        <input type="button" value="cancel" class="secondaryWindowButton" onclick="closeAddCategoryWindow(false)">
+        <input type="button" value="ok" class="primaryWindowButton" onclick="closeAddCategoryWindow(true)">
+      </div>
+    </div>
+  </body>
+</html>

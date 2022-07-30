@@ -8,7 +8,7 @@ const addCategoryEditText = document.getElementById('add_category_edit_text');
 const editorTable = document.getElementById('editor_table');
 
 const defaultTotalNumberOfCategories = 10;
-const defaultTotalDuration = 30000;
+const defaultTotalDuration = 15000;
 
 let resultsWindowHandle = null;
 let totalScoresRow = null;
@@ -214,7 +214,7 @@ let showResults = function() {
 
     let data = createDataObject();
     let encodedData = encodeData(data);
-    let totalDuration = getTotalDuration();
+    let totalDuration = getTotalDuration(data);
 
     saveData(encodedData, totalDuration);
 
@@ -248,12 +248,12 @@ let encodeAndSaveData = function() {
 
     let data = createDataObject();
     let encodedData = encodeData(data);
-    let totalDuration = getTotalDuration();
+    let totalDuration = getTotalDuration(data);
 
     saveData(encodedData, totalDuration);
 }
 
-const getTotalDuration = function() {
+const getTotalDuration = function(data) {
 
     if (data.categories.length < defaultTotalNumberOfCategories) {
         return defaultTotalDuration * data.categories.length / defaultTotalNumberOfCategories;
@@ -269,14 +269,15 @@ let saveData = function(/** @type{String} */ data,
 
 let loadAndDecodeData = function() {
 
-    let encodedData = new URLSearchParams(window.location.search).get("data");
+    const params = new URLSearchParams(window.location.search);
+    let encodedData = params.get("data");
     if (encodedData !== null) {
         let data = decodeData(encodedData);
         loadDataObject(data);
     } else {
         clearData();
     }
-    let totalDuration = new URLSearchParams(window.location.search).get("duration") | defaultTotalDuration;
+    let totalDuration = +params.get("duration");
 }
 
 loadAndDecodeData();

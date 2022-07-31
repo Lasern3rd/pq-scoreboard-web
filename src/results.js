@@ -2,6 +2,8 @@ const startAnimationButton = document.getElementById('start_animation_button');
 const canvas = document.getElementById("render_target");
 const ctx = canvas.getContext("2d");
 
+const animationBuffer = 10;
+
 // render metrics
 const defaultTotalDuration = 30000;
 const gridLinesSpacingPts = 10;
@@ -18,6 +20,7 @@ const minFontSize = 20;
 const scoreSectionBackground = "#201c28";
 const gridColorStub = "rgba(128,128,128,";
 const gridColor = "rgba(128,128,128," + "1)";
+const textColor = "#b35900";
 
 let data = undefined;
 let metrics = {};
@@ -70,7 +73,7 @@ const renderLoop = function(timestamp) {
 
     const animationStepPts = modifiedElapsed * data.maxScore / metrics.totalDuration;
 
-    if (animationStepPts > data.maxScore) {
+    if (animationStepPts > data.maxScore + animationBuffer) {
         return;
     }
 
@@ -115,6 +118,7 @@ const renderLoop = function(timestamp) {
     const mainSectionTeamColumnAndWhitespaceWidth = teamColumnWidth + mainSectionWhitespaceWidth;
     const teamColumnSemiWidth = teamColumnWidth / 2;
     const legendSectionSemiWidth = legendSectionWidth / 2;
+    const categoriesSectionMid = drawableAreaLeft + categoriesSectionWidth / 2;
 
     const drawableAreaTop =  outerPaddingPct * canvas.height;
     const drawableAreaBottom =  (1 - outerPaddingPct) * canvas.height;
@@ -140,6 +144,11 @@ const renderLoop = function(timestamp) {
         metrics.maxTeamName);
     metrics.teamNameFont = metrics.teamNameFontSize + "px Monospace";
 
+    metrics.categoriesFontSize = findOptimalFontSize(metrics.categoriesFontSize,
+        categoriesSectionWidth,
+        metrics.maxCategoryTitle);
+    metrics.categoriesFont = metrics.categoriesFontSize + "px Monospace";
+
     ctx.fillStyle = scoreSectionBackground;
     ctx.fillRect(mainSectionLeft,
         drawableAreaTop,
@@ -147,10 +156,13 @@ const renderLoop = function(timestamp) {
         scoresSectionBottom - drawableAreaTop);
 
     // draw grid
-    ctx.strokeStyle = gridColor;
+
+    ctx.strokeStyle = createGridGradient(mainSectionLeft, mainSectionRight, gridColor, data.teams.length,
+        mainSectionTeamColumnAndWhitespaceWidth, teamColumnSemiWidth);
     ctx.fillStyle = gridColor;
     ctx.beginPath();
-    let topGridLineScore = animationStepPts - (animationStepPts % 10);
+    let topGrindLineBound = Math.min(animationStepPts, data.maxScore);
+    let topGridLineScore = topGrindLineBound - (topGrindLineBound % 10);
 
     for (let i = 0; i <= topGridLineScore; i += gridLinesSpacingPts) {
 
@@ -172,7 +184,8 @@ const renderLoop = function(timestamp) {
         ctx.beginPath();
 
         let color = gridColorStub + (1 - (nextGridLineScore - animationStepPts) / gridLinesSpacingPts) + ")";
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = createGridGradient(mainSectionLeft, mainSectionRight, color, data.teams.length,
+            mainSectionTeamColumnAndWhitespaceWidth, teamColumnSemiWidth);
         ctx.fillStyle = color;
 
         let y = scoresSectionBottom - nextGridLineScore * scoresSectionHeight / data.maxScore;
@@ -187,12 +200,15 @@ const renderLoop = function(timestamp) {
 
     // draw main section
 
+    const categoriesAlpha = new Array(data.categories.length).fill(0);
+    const alphaIncrement = 1 / data.teams.length;
+
     for (let t = 0; t < data.teams.length; ++t) {
 
-        let left = mainSectionLeft + t * mainSectionTeamColumnAndWhitespaceWidth;
+        const left = mainSectionLeft + t * mainSectionTeamColumnAndWhitespaceWidth;
 
         ctx.font = metrics.teamNameFont;
-        ctx.fillStyle = '#FF0000'
+        ctx.fillStyle = textColor;
         ctx.fillText(data.teams[t], left + teamColumnSemiWidth, teamNamesSectionBaseline, teamColumnWidth);
 
         let score = 0, nextScore;
@@ -203,12 +219,15 @@ const renderLoop = function(timestamp) {
 
         for (let c = 0; cntn && c < data.categories.length; ++c) {
 
-            ctx.fillStyle = 'rgb(255,' + (128 + c * 128 / data.categories.length) + ',0)';
+            ctx.fillStyle = "rgb(255," + (128 + c * 128 / data.categories.length) + ",0)";
             nextScore = score + data.scores[c][t];
 
             if (nextScore >= animationStepPts) {
+                categoriesAlpha[c] += ((animationStepPts - score) / data.scores[c][t]) * alphaIncrement;
                 nextScore = animationStepPts;
                 cntn = false;
+            } else {
+                categoriesAlpha[c] += alphaIncrement;
             }
 
             nextBottom = scoresSectionBottom - nextScore * scoresSectionHeight / data.maxScore;
@@ -223,8 +242,19 @@ const renderLoop = function(timestamp) {
         }
 
         ctx.font = metrics.scoresFont;
-        ctx.fillStyle = '#FF0000'
+        ctx.fillStyle = textColor;
         ctx.fillText(score.toFixed(1), left + teamColumnSemiWidth, bottom - scoreLabelSectionSemiHeight, teamColumnWidth);
+    }
+
+    // draw category names
+    for (let c = 0; c < data.categories.length; ++c) {
+
+        ctx.font = metrics.categoriesFont;
+        ctx.fillStyle = "rgb(255," + (128 + c * 128 / data.categories.length) + ",0," + categoriesAlpha[c] + ")";
+        ctx.fillText(data.categories[c],
+            categoriesSectionMid,
+            scoresSectionBottom - (c + 1) * scoresSectionHeight / (data.categories.length + 1),
+            categoriesSectionWidth);
     }
 
     window.requestAnimationFrame(renderLoop);
@@ -245,6 +275,7 @@ const loadData = function() {
     }
     data.maxScore = data.totalScores.reduce((m, s) => Math.max(m, s), 0);
     metrics.maxTeamName = data.teams.reduce((m, t) => m.length > t.length ? m : t, "");
+    metrics.maxCategoryTitle = data.categories.reduce((m, c) => m.length > c.length ? m : c, "");
     metrics.animationSteps = data.totalScores.sort((a,b) => a - b).map(p => p * metrics.totalDuration / data.maxScore);
 }
 
@@ -291,6 +322,25 @@ const findOptimalFontSize = function(/** @type(Number) */ fontSize,
 
 const linearTransform = function(x, dlb, dub, ilb, iub) {
     return ilb + (x - dlb) * (iub - ilb) / (dub - dlb);
+}
+
+const createGridGradient = function(left, right, col, teams,
+    mainSectionTeamColumnAndWhitespaceWidth, teamColumnSemiWidth) {
+
+    const width = right - left;
+    let gridGradient = ctx.createLinearGradient(left, 0, right, 0);
+
+    for (let t = 0; t < teams; ++t) {
+
+        let x = t * mainSectionTeamColumnAndWhitespaceWidth;
+
+        gridGradient.addColorStop(x / width, col);
+        x += teamColumnSemiWidth;
+        gridGradient.addColorStop(x / width, scoreSectionBackground);
+        gridGradient.addColorStop((x + teamColumnSemiWidth) / width, col);
+    }
+
+    return gridGradient;
 }
 
 loadData();

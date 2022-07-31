@@ -8,13 +8,13 @@ const addCategoryEditText = document.getElementById('add_category_edit_text');
 const editorTable = document.getElementById('editor_table');
 
 const defaultTotalNumberOfCategories = 10;
-const defaultTotalDuration = 15000;
+const defaultTotalDuration = 30000;
 
 let resultsWindowHandle = null;
 let totalScoresRow = null;
 
-let toggleOverlay = function(/** @type{Boolean} */ show,
-                             /** @type{HTMLElement} */ window) {
+const toggleOverlay = function(/** @type{Boolean} */ show,
+                               /** @type{HTMLElement} */ window) {
 
     let display = show ? "block" :  "none";
 
@@ -22,14 +22,14 @@ let toggleOverlay = function(/** @type{Boolean} */ show,
     window.style.display = display;
 };
 
-let showAddTeamWindow = function() {
+const showAddTeamWindow = function() {
 
     addTeamEditText.value = null;
     toggleOverlay(true, addTeamWindow);
     addTeamEditText.focus();
 };
 
-let closeAddTeamWindow = function(/** @type{Boolean} */ add) {
+const closeAddTeamWindow = function(/** @type{Boolean} */ add) {
 
     toggleOverlay(false, addTeamWindow);
 
@@ -47,14 +47,14 @@ let closeAddTeamWindow = function(/** @type{Boolean} */ add) {
     }
 };
 
-let showAddCategoryWindow = function() {
+const showAddCategoryWindow = function() {
 
     addCategoryEditText.value = null;
     toggleOverlay(true, addCategoryWindow);
     addCategoryEditText.focus();
 };
 
-let closeAddCategoryWindow = function(/** @type{Boolean} */ add) {
+const closeAddCategoryWindow = function(/** @type{Boolean} */ add) {
 
     toggleOverlay(false, addCategoryWindow);
 
@@ -72,8 +72,8 @@ let closeAddCategoryWindow = function(/** @type{Boolean} */ add) {
     }
 };
 
-let insertCell = function(/** @type{HTMLTableRowElement} */ row,
-                          /** @type{Boolean} */ editable) {
+const insertCell = function(/** @type{HTMLTableRowElement} */ row,
+                            /** @type{Boolean} */ editable) {
 
     let cell = row.insertCell();
     let contentElement = document.createElement("div");
@@ -84,9 +84,9 @@ let insertCell = function(/** @type{HTMLTableRowElement} */ row,
     return contentElement;
 }
 
-let insertHeaderCell = function(/** @type{HTMLTableRowElement} */ row,
-                                /** @type{String} */ data,
-                                /** @type{Boolean} */ editable) {
+const insertHeaderCell = function(/** @type{HTMLTableRowElement} */ row,
+                                  /** @type{String} */ data,
+                                  /** @type{Boolean} */ editable) {
 
     let contentElement = insertCell(row, editable);
     contentElement.textContent = data;
@@ -94,8 +94,8 @@ let insertHeaderCell = function(/** @type{HTMLTableRowElement} */ row,
     return contentElement;
 }
 
-let insertDataCell = function(/** @type{HTMLTableRowElement} */ row,
-                              /** @type{String} */ data = "") {
+const insertDataCell = function(/** @type{HTMLTableRowElement} */ row,
+                                /** @type{String} */ data = "") {
 
     let columnId = row.cells.length;
     let contentElement = insertCell(row, true);
@@ -118,8 +118,8 @@ let insertDataCell = function(/** @type{HTMLTableRowElement} */ row,
     return contentElement;
 }
 
-let insertConstDataCell = function(/** @type{HTMLTableRowElement} */ row,
-                                   /** @type{String} */ data) {
+const insertConstDataCell = function(/** @type{HTMLTableRowElement} */ row,
+                                     /** @type{String} */ data) {
 
     let contentElement = insertCell(row, false);
     contentElement.textContent = data;
@@ -127,7 +127,7 @@ let insertConstDataCell = function(/** @type{HTMLTableRowElement} */ row,
     return contentElement;
 }
 
-let createDataObject = function() {
+const createDataObject = function() {
 
     let rows = editorTable.rows.length;
     let cols = editorTable.rows[0].cells.length;
@@ -159,7 +159,7 @@ let createDataObject = function() {
     };
 }
 
-let loadDataObject = function(data) {
+const loadDataObject = function(data) {
 
     clearData();
 
@@ -173,7 +173,7 @@ let loadDataObject = function(data) {
     // todo: check all rows
 
     for (const team of data.teams) {
-        insertHeaderCell(editorTable.rows[0], team), true;
+        insertHeaderCell(editorTable.rows[0], team, true);
     }
 
     let totalScores = new Array(data.teams.length).fill(0);
@@ -195,7 +195,7 @@ let loadDataObject = function(data) {
     }
 }
 
-let encodeData = function(data) {
+const encodeData = function(data) {
 
     return btoa(JSON.stringify(data))
         .replace("==", "")
@@ -203,14 +203,14 @@ let encodeData = function(data) {
         .replace("/", "_");
 }
 
-let decodeData = function(/** @type{String} */ data) {
+const decodeData = function(/** @type{String} */ data) {
 
     return JSON.parse(atob(data
         .replace("-", "+")
         .replace("_", "/")));
 }
 
-let showResults = function() {
+const showResults = function() {
 
     let data = createDataObject();
     let encodedData = encodeData(data);
@@ -232,7 +232,7 @@ let showResults = function() {
     resultsWindowHandle.focus();
 }
 
-let clearData = function() {
+const clearData = function() {
 
     for (let i = editorTable.rows.length - 1; i >= 0; --i) {
         editorTable.deleteRow(-1);
@@ -244,7 +244,7 @@ let clearData = function() {
     insertHeaderCell(totalScoresRow, "Total:", false);
 }
 
-let encodeAndSaveData = function() {
+const encodeAndSaveData = function() {
 
     let data = createDataObject();
     let encodedData = encodeData(data);
@@ -261,13 +261,13 @@ const getTotalDuration = function(data) {
     return defaultTotalDuration;
 }
 
-let saveData = function(/** @type{String} */ data,
-                        /** @type{Number} */ totalDuration) {
+const saveData = function(/** @type{String} */ data,
+                          /** @type{Number} */ totalDuration) {
 
     window.history.pushState(null, null, "?data=" + data + "&duration=" + totalDuration);
 }
 
-let loadAndDecodeData = function() {
+const loadAndDecodeData = function() {
 
     const params = new URLSearchParams(window.location.search);
     let encodedData = params.get("data");

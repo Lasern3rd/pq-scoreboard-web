@@ -17,7 +17,7 @@ const minFontSize = 20;
 // colors
 const scoreSectionBackground = "#201c28";
 const gridColorStub = "rgba(128,128,128,";
-const gridColor = "rgba(128,128,128," + "255)";
+const gridColor = "rgba(128,128,128," + "1)";
 
 let data = undefined;
 let metrics = {};
@@ -45,7 +45,30 @@ const renderLoop = function(timestamp) {
     }
 
     const elapsed = timestamp - startTimestamp;
-    const animationStepPts = elapsed * data.maxScore / metrics.totalDuration;
+
+    // map elapsed time to slow down before animation steps
+
+    let animationWindowStart = 0, animationWindowEnd = metrics.totalDuration;
+    if (metrics.animationSteps.length > 1) {
+        let i = metrics.animationSteps.length - 2;
+        for (; i >= 0; --i) {
+            if (elapsed >= metrics.animationSteps[i]) {
+                animationWindowStart = metrics.animationSteps[i];
+                break;
+            }
+        }
+        animationWindowEnd = metrics.animationSteps[i + 1];
+    }
+
+    // map d in [animationWindowStart, animationWindowEnd] -f-> [0, 100] -g-> [0, 100] -f^-1-> [animationWindowStart, animationWindowEnd]
+    // f: linear transform
+    // choose g s.t. g(0) = 0, g(100) = 100 and g strictly monotone
+    // we chose g(d) = sqrt(d) * 10
+    const modifiedElapsed = linearTransform(10 * Math.sqrt(
+        linearTransform(elapsed, animationWindowStart, animationWindowEnd, 0, 100)),
+        0, 100, animationWindowStart, animationWindowEnd);
+
+    const animationStepPts = modifiedElapsed * data.maxScore / metrics.totalDuration;
 
     if (animationStepPts > data.maxScore) {
         return;
@@ -204,18 +227,10 @@ const renderLoop = function(timestamp) {
         ctx.fillText(score.toFixed(1), left + teamColumnSemiWidth, bottom - scoreLabelSectionSemiHeight, teamColumnWidth);
     }
 
-    /*
-    ctx.beginPath();
-    ctx.moveTo(canvas.width / 2, canvas.height / 2);
-    ctx.lineTo(canvas.width / 2 + Math.cos(elapsed) * 10,
-        canvas.height / 2  + Math.sin(elapsed) * 10);
-    ctx.stroke();
-    */
-
     window.requestAnimationFrame(renderLoop);
 }
 
-let loadData = function() {
+const loadData = function() {
 
     const params = new URLSearchParams(window.location.search);
     let encodedData = params.get("data");
@@ -230,9 +245,10 @@ let loadData = function() {
     }
     data.maxScore = data.totalScores.reduce((m, s) => Math.max(m, s), 0);
     metrics.maxTeamName = data.teams.reduce((m, t) => m.length > t.length ? m : t, "");
+    metrics.animationSteps = data.totalScores.sort((a,b) => a - b).map(p => p * metrics.totalDuration / data.maxScore);
 }
 
-let decodeData = function(/** @type{String} */ data) {
+const decodeData = function(/** @type{String} */ data) {
 
     return JSON.parse(atob(data
         .replace("-", "+")
@@ -271,6 +287,10 @@ const findOptimalFontSize = function(/** @type(Number) */ fontSize,
     }
 
     return fontSize;
+}
+
+const linearTransform = function(x, dlb, dub, ilb, iub) {
+    return ilb + (x - dlb) * (iub - ilb) / (dub - dlb);
 }
 
 loadData();

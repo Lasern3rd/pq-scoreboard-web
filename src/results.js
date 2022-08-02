@@ -15,6 +15,24 @@ const scoreLabelHeightPct = 0.1;
 const legendSectionWidthPct = 0.05;
 const defaultFontSize = 40;
 const minFontSize = 20;
+// fireworks
+const fireworksMaxNumber = 8;
+const fireworksFuseMin = 400;
+const fireworksFuseWindow = 800;
+const fireworksLifeTimeMin = 1000;
+const fireworksLifeTimeWindow = 3000;
+const fireworksRespawnTimeMin = 0;
+const fireworksRespawnTimeWindow = 2500;
+const fireworksExpandTimeMin = 100;
+const fireworksExpandTimeWindow = 100;
+const fireworksParticlesMin = 16;
+const fireworksParticlesWindow = 20;
+const fireworksHorizontalPadding = 0.1;
+const fireworksRadiusMin = 0.07;
+const fireworksRadiusWindow = 0.10;
+const fireworksTargetXOffset = -0.15;
+const fireworksTargetXRange = 0.3;
+const fireworksGravityFactor = 0.5 * 9.81 / 1000000;
 
 // colors
 const scoreSectionBackground = "#201c28";
@@ -25,6 +43,7 @@ const textColor = "#b35900";
 let data = undefined;
 let metrics = {};
 let startTimestamp = undefined;
+let fireworks = undefined;
 
 const startAnimation = function() {
 
@@ -71,38 +90,41 @@ const renderLoop = function(timestamp) {
         linearTransform(elapsed, animationWindowStart, animationWindowEnd, 0, 100)),
         0, 100, animationWindowStart, animationWindowEnd);
 
-    const animationStepPts = modifiedElapsed * data.maxScore / metrics.totalDuration;
+    let animationStepPts = modifiedElapsed * data.maxScore / metrics.totalDuration;
 
     if (animationStepPts > data.maxScore + animationBuffer) {
-        return;
+        if (!metrics.fireworks) {
+            return;
+        }
+        animationStepPts = data.maxScore + animationBuffer;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    //  ---------------------------------------------------------------------
-    // |                            outer padding                            |
-    // |    -------------------------------------------------------------    |
-    // |   |         |                                               |   |   |
-    // |   |         |                 score labels                  |   |   |
-    // |   |         |                                               |   |   |
-    // |   |         |--------------------------------------- --- ---| g |   |
-    // |   |    c    |           |           |           |   |   |   | r |   |
-    // |   |    a    |           |           |           |   | m |   | i |   |
-    // |   |    t    |    ---    |           |           |   | a |   | d |   |
-    // |   |    e    |   |   |   |           |    ---    |   | x |   |   |   |
-    // |   |    g    |   |   |   |    ---    |   |   |   |   |   |   | l |   |
-    // |   |    o    |   |   |   |   |   |   |   |   |   |   | s |   | e |   |
-    // |   |    r    |   |   |   |   |   |   |   |   |   |   | c |   | g |   |
-    // |   |    i    |   |   |   |   |   |   |   |   |   |   | o |   | e |   |
-    // |   |    e    |   |   |   |   |   |   |   |   |   |   | r |   | n |   |
-    // |   |    s    |   |   |   |   |   |   |   |   |   |   | e |   | d |   |
-    // |   |         |   |   |   |   |   |   |   |   |   |   |   |   |   |   |
-    // |   |         |-----------|-----------------------------------|   |   |
-    // |   |         |   team    |   team    |   team    |   team    |   |   |
-    // |   |         |   name    |   name    |   name    |   name    |   |   |
-    // |    -------------------------------------------------------------    |
-    // |                                                                     |
-    //  ---------------------------------------------------------------------
+    //  ---------------------------------------------------------------------------
+    // |                               outer padding                               |
+    // |    -------------------------------------------------------------------    |
+    // |   |         |                                                     |   |   |
+    // |   |         |                    score labels                     |   |   |
+    // |   |         |                                                     |   |   |
+    // |   |         |--------------------------------------------- --- ---| g |   |
+    // |   |    c    |           | |           | |           | |   |   |   | r |   |
+    // |   |    a    |           | |           | |           | |   | m |   | i |   |
+    // |   |    t    |    ---    | |           | |           | |   | a |   | d |   |
+    // |   |    e    |   |   |   | |           | |    ---    | |   | x |   |   |   |
+    // |   |    g    |   |   |   | |    ---    | |   |   |   | |   |   |   | l |   |
+    // |   |    o    |   |   |   | |   |   |   | |   |   |   | |   | s |   | e |   |
+    // |   |    r    |   |   |   | |   |   |   | |   |   |   | |   | c |   | g |   |
+    // |   |    i    |   |   |   | |   |   |   | |   |   |   | |   | o |   | e |   |
+    // |   |    e    |   |   |   | |   |   |   | |   |   |   | |   | r |   | n |   |
+    // |   |    s    |   |   |   | |   |   |   | |   |   |   | |   | e |   | d |   |
+    // |   |         |   |   |   | |   |   |   | |   |   |   | |   |   |   |   |   |
+    // |   |         |-----------| |-----------| |-----------| |-----------|   |   |
+    // |   |         |   team    | |   team    | |   team    | |   team    |   |   |
+    // |   |         |   name    | |   name    | |   name    | |   name    |   |   |
+    // |    -------------------------------------------------------------------    |
+    // |                                                                           |
+    //  ---------------------------------------------------------------------------
 
     const drawableAreaLeft = outerPaddingPct * canvas.width;
     const drawableAreaRight = (1 - outerPaddingPct) * canvas.width;
@@ -257,6 +279,82 @@ const renderLoop = function(timestamp) {
             categoriesSectionWidth);
     }
 
+    if (metrics.fireworks && animationStepPts >= data.maxScore) {
+
+        if (fireworks === undefined) {
+            fireworks = new Array(fireworksMaxNumber);
+        }
+        for (let i = 0; i < fireworksMaxNumber; ++i) {
+            if (fireworks[i] === undefined || fireworks[i].respawnTime < elapsed) {
+                createFirework(elapsed, i);
+            }
+        }
+
+        const radiusScale = Math.min(drawableAreaWidth, drawableAreaHeight);
+
+        for (const firework of fireworks) {
+
+            if (firework.lifeTime < elapsed) {
+                continue;
+            }
+
+            let age = elapsed - firework.startTime;
+
+            if (age < firework.fuseTime) {
+
+                const td = age / firework.fuseTime;
+
+                const x = drawableAreaLeft + (firework.targetX * td + firework.startX * (1- td)) * drawableAreaWidth;
+                const y = drawableAreaBottom - (firework.targetY + firework.startY) * drawableAreaHeight * td;
+
+                ctx.beginPath();
+                ctx.fillStyle = "#FFFFFF";
+                ctx.arc(x, y, 3, 0, 2 * Math.PI);
+                ctx.fill();
+
+                continue;
+            }
+
+            age -= firework.fuseTime;
+
+            let radius = firework.radius;
+
+            if (age < firework.expandTime) {
+                radius *= age / firework.expandTime;
+            }
+
+            const gravityOffY = fireworksGravityFactor * age * age;
+
+            const alpha = Math.sin(linearTransform(age, 0, firework.lifeTime - firework.startTime - firework.fuseTime, Math.PI / 2, Math.PI));
+            let colorInner = "hsla(" + firework.color + ", 100%, 70%, " + alpha + ")";
+            let colorMid = "hsla(" + firework.color + ", 100%, 60%, " + 0.7 * alpha + ")";
+            let colorOuter = "hsla(" + firework.color + ", 100%, 50%, " + 0.3 * alpha + ")";
+
+            for (let p = 0; p < firework.particles; ++p) {
+
+                let x = drawableAreaLeft + firework.targetX * drawableAreaWidth
+                    + Math.cos(Math.PI * 2 * p / firework.particles) * radius * radiusScale;
+                let y = drawableAreaBottom + gravityOffY - firework.targetY * drawableAreaHeight
+                    + Math.sin(Math.PI * 2 * p / firework.particles) * radius * radiusScale;
+
+                ctx.beginPath();
+                ctx.fillStyle = colorOuter;
+                ctx.arc(x, y, 6, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.fillStyle = colorMid;
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.fillStyle = colorInner;
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+
     window.requestAnimationFrame(renderLoop);
 }
 
@@ -266,6 +364,7 @@ const loadData = function() {
     let encodedData = params.get("data");
     data = decodeData(encodedData);
     metrics.totalDuration = +params.get("duration");
+    metrics.fireworks = params.get("fireworks") === "true";
 
     data.totalScores = new Array(data.teams.length).fill(0);
     for (let r = 0; r < data.scores.length; ++r) {
@@ -341,6 +440,34 @@ const createGridGradient = function(left, right, col, teams,
     }
 
     return gridGradient;
+}
+
+const createFirework = function(elapsed, i) {
+
+    const startX = fireworksHorizontalPadding + Math.random() * (1 - 2 * fireworksHorizontalPadding);
+    const fuseTime = fireworksFuseMin + Math.random() * fireworksFuseWindow;
+    const lifeTime = elapsed + fuseTime + fireworksLifeTimeMin + Math.random() * fireworksLifeTimeWindow;
+
+    const targetY = 0.5 + Math.random() / 2;
+
+    fireworks[i] = {
+        startTime: elapsed,
+        fuseTime: fuseTime,
+        lifeTime: lifeTime,
+        respawnTime: lifeTime + fireworksRespawnTimeMin + Math.random() * fireworksRespawnTimeWindow,
+        expandTime: fireworksExpandTimeMin + Math.random() + fireworksExpandTimeWindow,
+        startX: startX,
+        startY: 0,
+        bezierAX: Math.random(),
+        bezierAY: Math.random() * targetY,
+        bezierBX: Math.random(),
+        bezierBY: Math.random() * targetY,
+        targetX: startX + fireworksTargetXOffset + Math.random() * fireworksTargetXRange,
+        targetY: targetY,
+        radius: fireworksRadiusMin + Math.random() * fireworksRadiusWindow,
+        particles: Math.round(fireworksParticlesMin + Math.random() * fireworksParticlesWindow),
+        color: Math.random() * 360
+    };
 }
 
 loadData();

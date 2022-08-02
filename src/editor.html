@@ -17,10 +17,11 @@
 
     <!-- bottom bar -->
     <div class="bottomBar">
-      <input type="button" value="add team" class="secondaryBottomBarButton" onclick="showAddTeamWindow()">
-      <input type="button" value="add category" class="secondaryBottomBarButton" onclick="showAddCategoryWindow()">
-      <input type="button" value="clear data" class="secondaryBottomBarButton" onclick="clearData()">
-      <input type="button" value="show results" class="primaryBottomBarButton" onclick="showResults()">
+        <input type="button" value="add team" class="secondaryBottomBarButton" onclick="showAddTeamWindow()">
+        <input type="button" value="add category" class="secondaryBottomBarButton" onclick="showAddCategoryWindow()">
+        <input type="button" value="clear data" class="secondaryBottomBarButton" onclick="clearData()">
+        <input type="button" value="close results window" class="secondaryBottomBarButton" onclick="closeResultsWindow()">
+        <input type="button" value="show results" class="primaryBottomBarButton" onclick="showShowResultsWindow()">
     </div>
 
     <!-- windows -->
@@ -45,6 +46,22 @@
       <div class="windowContent">
         <input type="button" value="cancel" class="secondaryWindowButton" onclick="closeAddCategoryWindow(false)">
         <input type="button" value="ok" class="primaryWindowButton" onclick="closeAddCategoryWindow(true)">
+      </div>
+    </div>
+
+    <div id="show_results_window" class="window">
+      <div class="windowTitle">show results</div>
+      <div class="windowContent">
+        <div class="windowLabel">duration:</div>
+        <input id="duration_edit_text" type="text" placeholder="duration..." class="windowEditText">
+      </div>
+      <div class="windowContent">
+        <div class="windowLabel">fireworks:</div>
+        <input id="fireworks_check_box" type="checkbox" class="windowCheckBox">
+      </div>
+      <div class="windowContent">
+        <input type="button" value="cancel" class="secondaryWindowButton" onclick="closeShowResultsWindow(false)">
+        <input type="button" value="ok" class="primaryWindowButton" onclick="closeShowResultsWindow(true)">
       </div>
     </div>
   </body>

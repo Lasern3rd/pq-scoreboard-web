@@ -5,13 +5,19 @@ const addTeamWindow = document.getElementById('add_team_window');
 const addTeamEditText = document.getElementById('add_team_edit_text');
 const addCategoryWindow = document.getElementById('add_category_window');
 const addCategoryEditText = document.getElementById('add_category_edit_text');
+const showResultsWindow = document.getElementById('show_results_window');
+const durationEditText = document.getElementById('duration_edit_text');
+const fireworksCheckBox = document.getElementById('fireworks_check_box');
 const editorTable = document.getElementById('editor_table');
 
 const defaultTotalNumberOfCategories = 10;
 const defaultTotalDuration = 30000;
 
+let totalDuration = defaultTotalDuration;
 let resultsWindowHandle = null;
 let totalScoresRow = null;
+
+let showResultsWindowData = {};
 
 const toggleOverlay = function(/** @type{Boolean} */ show,
                                /** @type{HTMLElement} */ window) {
@@ -71,6 +77,41 @@ const closeAddCategoryWindow = function(/** @type{Boolean} */ add) {
         }
     }
 };
+
+const showShowResultsWindow = function() {
+
+    let data = createDataObject();
+    let encodedData = encodeData(data);
+    let totalDuration = getTotalDuration(data);
+    let fireworks = data.categories.length >= defaultTotalNumberOfCategories;
+
+    saveData(encodedData, totalDuration, fireworks);
+
+    showResultsWindowData.encodedData = encodedData;
+
+    durationEditText.value = "" + totalDuration;
+    fireworksCheckBox.checked = fireworks;
+
+    toggleOverlay(true, showResultsWindow);
+};
+
+const closeShowResultsWindow = function(/** @type{Boolean} */ show) {
+
+    toggleOverlay(false, showResultsWindow);
+
+    if (show) {
+        showResults(showResultsWindowData.encodedData,
+            +durationEditText.value,
+            fireworksCheckBox.checked);
+    }
+}
+
+const closeResultsWindow = function() {
+
+    if (resultsWindowHandle !== null && !resultsWindowHandle.closed) {
+        resultsWindowHandle.close();
+    }
+}
 
 const insertCell = function(/** @type{HTMLTableRowElement} */ row,
                             /** @type{Boolean} */ editable) {
@@ -210,16 +251,12 @@ const decodeData = function(/** @type{String} */ data) {
         .replace("_", "/")));
 }
 
-const showResults = function() {
-
-    let data = createDataObject();
-    let encodedData = encodeData(data);
-    let totalDuration = getTotalDuration(data);
-
-    saveData(encodedData, totalDuration);
+const showResults = function(/** @type{String} */ encodedData,
+                             /** @type{Number} */ totalDuration,
+                             /** @type{Boolean} */ fireworks) {
 
     resultsWindowHandle = window.open(
-        "results.html?data=" + encodedData + "&duration=" + totalDuration,
+        "results.html?data=" + encodedData + "&duration=" + totalDuration + "&fireworks=" + fireworks,
         resultsWindowName,
         "height=300," +
         "width=600," +
@@ -262,9 +299,10 @@ const getTotalDuration = function(data) {
 }
 
 const saveData = function(/** @type{String} */ data,
-                          /** @type{Number} */ totalDuration) {
+                          /** @type{Number} */ totalDuration,
+                          /** @type{Boolean} */ fireworks) {
 
-    window.history.pushState(null, null, "?data=" + data + "&duration=" + totalDuration);
+    window.history.pushState(null, null, "?data=" + data + "&duration=" + totalDuration + "&fireworks=" + fireworks);
 }
 
 const loadAndDecodeData = function() {
@@ -277,7 +315,7 @@ const loadAndDecodeData = function() {
     } else {
         clearData();
     }
-    let totalDuration = +params.get("duration");
+    totalDuration = +params.get("duration");
 }
 
 loadAndDecodeData();

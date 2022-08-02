@@ -116,6 +116,23 @@ div[valid="false"] {
 .windowEditText {
     margin: 10px;
     flex-grow: 1;
+    position: absolute;
+    left: 33%;
+}
+
+.windowCheckBox {
+    margin: 10px;
+    position: absolute;
+    left: 33%;
+
+}
+
+.windowLabel {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    margin-left: 10px;
+    color: #FFFFFF;
+    text-align: right;
 }
 
 .primaryWindowButton, .secondaryWindowButton {

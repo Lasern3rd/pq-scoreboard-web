@@ -15,6 +15,7 @@ const scoreLabelHeightPct = 0.1;
 const legendSectionWidthPct = 0.05;
 const defaultFontSize = 40;
 const minFontSize = 20;
+const gridLineWidth = 1;
 // fireworks
 const fireworksMaxNumber = 8;
 const fireworksFuseMin = 400;
@@ -33,6 +34,9 @@ const fireworksRadiusWindow = 0.10;
 const fireworksTargetXOffset = -0.15;
 const fireworksTargetXRange = 0.3;
 const fireworksGravityFactor = 0.5 * 9.81 / 1000000;
+const fireworksSmokeTrailLineWidth = 3;
+const fireworksSmokeTrailLineSegments = 20;
+const fireworksSmokeTrailLineSegmentsSteps = 0.02;
 
 // colors
 const scoreSectionBackground = "#201c28";
@@ -179,6 +183,8 @@ const renderLoop = function(timestamp) {
 
     // draw grid
 
+    ctx.lineWidth = gridLineWidth;
+
     ctx.strokeStyle = createGridGradient(mainSectionLeft, mainSectionRight, gridColor, data.teams.length,
         mainSectionTeamColumnAndWhitespaceWidth, teamColumnSemiWidth);
     ctx.fillStyle = gridColor;
@@ -290,6 +296,7 @@ const renderLoop = function(timestamp) {
             }
         }
 
+        ctx.lineWidth = fireworksSmokeTrailLineWidth;
         const radiusScale = Math.min(drawableAreaWidth, drawableAreaHeight);
 
         for (const firework of fireworks) {
@@ -302,15 +309,42 @@ const renderLoop = function(timestamp) {
 
             if (age < firework.fuseTime) {
 
-                const td = age / firework.fuseTime;
+                const ageFactor = age / firework.fuseTime;
 
-                const x = drawableAreaLeft + (firework.targetX * td + firework.startX * (1- td)) * drawableAreaWidth;
-                const y = drawableAreaBottom - (firework.targetY + firework.startY) * drawableAreaHeight * td;
+                let px, py;
 
-                ctx.beginPath();
-                ctx.fillStyle = "#FFFFFF";
-                ctx.arc(x, y, 3, 0, 2 * Math.PI);
-                ctx.fill();
+                for (let i = fireworksSmokeTrailLineSegments, td = ageFactor;
+                    i > 0 && td >= 0;
+                    --i, td -= fireworksSmokeTrailLineSegmentsSteps) {
+
+                    const mtd = (1 - td);
+                    const a = mtd * mtd * mtd;
+                    const b = 3 * td * mtd * mtd;
+                    const c = 3 * td * td * mtd;
+                    const d = td * td * td;
+
+                    const x = drawableAreaLeft + drawableAreaWidth * (
+                        a * firework.startX +
+                        b * firework.bezierAX +
+                        c * firework.bezierBX +
+                        d * firework.targetX);
+                    const y = drawableAreaBottom - drawableAreaHeight * (
+                        a * firework.startY +
+                        b * firework.bezierAY +
+                        c * firework.bezierBY +
+                        d * firework.targetY);
+
+                    if (i < 20) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = "rgba(255, 255, 255, " + (i / fireworksSmokeTrailLineSegments) + ")";
+                        ctx.moveTo(px, py);
+                        ctx.lineTo(x, y);
+                        ctx.stroke();
+                    }
+
+                    px = x;
+                    py = y;
+                }
 
                 continue;
             }
@@ -444,11 +478,16 @@ const createGridGradient = function(left, right, col, teams,
 
 const createFirework = function(elapsed, i) {
 
-    const startX = fireworksHorizontalPadding + Math.random() * (1 - 2 * fireworksHorizontalPadding);
     const fuseTime = fireworksFuseMin + Math.random() * fireworksFuseWindow;
     const lifeTime = elapsed + fuseTime + fireworksLifeTimeMin + Math.random() * fireworksLifeTimeWindow;
 
+    const startX = fireworksHorizontalPadding + Math.random() * (1 - 2 * fireworksHorizontalPadding);
+
+    const targetX = startX + fireworksTargetXOffset + Math.random() * fireworksTargetXRange;
     const targetY = 0.5 + Math.random() / 2;
+
+    const ax = Math.random();
+    const bx = Math.random();
 
     fireworks[i] = {
         startTime: elapsed,
@@ -458,11 +497,11 @@ const createFirework = function(elapsed, i) {
         expandTime: fireworksExpandTimeMin + Math.random() + fireworksExpandTimeWindow,
         startX: startX,
         startY: 0,
-        bezierAX: Math.random(),
+        bezierAX: startX * ax + targetX * (1 - ax),
         bezierAY: Math.random() * targetY,
-        bezierBX: Math.random(),
+        bezierBX: startX * bx + targetX * (1 - bx),
         bezierBY: Math.random() * targetY,
-        targetX: startX + fireworksTargetXOffset + Math.random() * fireworksTargetXRange,
+        targetX: targetX,
         targetY: targetY,
         radius: fireworksRadiusMin + Math.random() * fireworksRadiusWindow,
         particles: Math.round(fireworksParticlesMin + Math.random() * fireworksParticlesWindow),

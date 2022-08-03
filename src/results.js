@@ -5,7 +5,6 @@ const ctx = canvas.getContext("2d");
 const animationBuffer = 10;
 
 // render metrics
-const defaultTotalDuration = 30000;
 const gridLinesSpacingPts = 10;
 const outerPaddingPct = 0.01;
 const mainSectionWhitespaceWidthPct = 0.1;
@@ -16,6 +15,7 @@ const legendSectionWidthPct = 0.05;
 const defaultFontSize = 40;
 const minFontSize = 20;
 const gridLineWidth = 1;
+const winnerRevealTimeFactor = 0.98;
 // fireworks
 const fireworksMaxNumber = 8;
 const fireworksFuseMin = 400;
@@ -74,33 +74,42 @@ const renderLoop = function(timestamp) {
 
     // map elapsed time to slow down before animation steps
 
-    let animationWindowStart = 0, animationWindowEnd = metrics.totalDuration;
-    if (metrics.animationSteps.length > 1) {
-        let i = metrics.animationSteps.length - 2;
-        for (; i >= 0; --i) {
-            if (elapsed >= metrics.animationSteps[i]) {
-                animationWindowStart = metrics.animationSteps[i];
-                break;
+    let animationStepPts = data.maxScore;
+
+    if (elapsed < metrics.winnerRevealTime) {
+
+        const animationWindowElapsed = elapsed % metrics.timePerTeam;
+
+        let animationWindowStartImage = 0, animationWindowEndImage = data.maxScore;
+
+        if (metrics.animationSteps.length > 1) {
+
+            animationWindowIndex = Math.floor(elapsed / metrics.timePerTeam) - 1;
+
+            if (animationWindowIndex < 0) {
+                animationWindowEndImage = metrics.animationSteps[0];
+            } else {
+                animationWindowStartImage = metrics.animationSteps[animationWindowIndex];
+                animationWindowEndImage = metrics.animationSteps[animationWindowIndex + 1];
             }
         }
-        animationWindowEnd = metrics.animationSteps[i + 1];
-    }
 
-    // map d in [animationWindowStart, animationWindowEnd] -f-> [0, 100] -g-> [0, 100] -f^-1-> [animationWindowStart, animationWindowEnd]
-    // f: linear transform
-    // choose g s.t. g(0) = 0, g(100) = 100 and g strictly monotone
-    // we chose g(d) = sqrt(d) * 10
-    const modifiedElapsed = linearTransform(10 * Math.sqrt(
-        linearTransform(elapsed, animationWindowStart, animationWindowEnd, 0, 100)),
-        0, 100, animationWindowStart, animationWindowEnd);
+        // let [d1, d2] be the animationWindowIndex-th time frame
+        // map d in [d1, d2] -f-> [0, 100] -g-> [0, 100] -f^-1-> [animationWindowStart, animationWindowEnd]
+        // f: linear transform
+        // choose g s.t. g(0) = 0, g(100) = 100 and g strictly monotone
+        // we chose g(d) = sqrt(d) * 10
+        animationStepPts = linearTransform(10 * Math.sqrt(
+            linearTransform(animationWindowElapsed, 0, metrics.timePerTeam, 0, 100)),
+            0, 100, animationWindowStartImage, animationWindowEndImage);
 
-    let animationStepPts = modifiedElapsed * data.maxScore / metrics.totalDuration;
-
-    if (animationStepPts > data.maxScore + animationBuffer) {
-        if (!metrics.fireworks) {
-            return;
-        }
-        animationStepPts = data.maxScore + animationBuffer;
+    } else if (elapsed <= metrics.totalDuration) {
+        // just use a linear mapping
+        animationStepPts = linearTransform(elapsed - metrics.winnerRevealTime,
+            0, metrics.totalDuration - metrics.winnerRevealTime,
+            metrics.animationSteps[metrics.animationSteps.length - 2], data.maxScore);
+    } else if (!metrics.fireworks) {
+        return;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -409,7 +418,9 @@ const loadData = function() {
     data.maxScore = data.totalScores.reduce((m, s) => Math.max(m, s), 0);
     metrics.maxTeamName = data.teams.reduce((m, t) => m.length > t.length ? m : t, "");
     metrics.maxCategoryTitle = data.categories.reduce((m, c) => m.length > c.length ? m : c, "");
-    metrics.animationSteps = data.totalScores.sort((a,b) => a - b).map(p => p * metrics.totalDuration / data.maxScore);
+    metrics.animationSteps = data.totalScores.sort((a,b) => a - b);
+    metrics.winnerRevealTime = winnerRevealTimeFactor * metrics.totalDuration;
+    metrics.timePerTeam = metrics.winnerRevealTime / (data.teams.length - 1);
 }
 
 const decodeData = function(/** @type{String} */ data) {

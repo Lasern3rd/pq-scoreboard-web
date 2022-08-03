@@ -116,6 +116,9 @@ div[valid="false"] {
 .windowEditText {
     margin: 10px;
     flex-grow: 1;
+}
+
+.windowContentColumn {
     position: absolute;
     left: 33%;
 }
@@ -124,7 +127,6 @@ div[valid="false"] {
     margin: 10px;
     position: absolute;
     left: 33%;
-
 }
 
 .windowLabel {

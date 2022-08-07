@@ -16,6 +16,10 @@ const defaultFontSize = 40;
 const minFontSize = 20;
 const gridLineWidth = 1;
 const winnerRevealTimeFactor = 0.98;
+// highlights
+const highlightsExpandTime = 250;
+const highlightsLifeTime = 800;
+const highlightAreaFactor = 0.08;
 // fireworks
 const fireworksMaxNumber = 8;
 const fireworksFuseMin = 400;
@@ -43,11 +47,13 @@ const scoreSectionBackground = "#201c28";
 const gridColorStub = "rgba(128,128,128,";
 const gridColor = "rgba(128,128,128," + "1)";
 const textColor = "#b35900";
+const highlightStub = "rgba(255,255,255,";
 
 let data = undefined;
 let metrics = {};
 let startTimestamp = undefined;
 let fireworks = undefined;
+let highlights = undefined;
 
 const startAnimation = function() {
 
@@ -108,7 +114,7 @@ const renderLoop = function(timestamp) {
         animationStepPts = linearTransform(elapsed - metrics.winnerRevealTime,
             0, metrics.totalDuration - metrics.winnerRevealTime,
             metrics.animationSteps[metrics.animationSteps.length - 2], data.maxScore);
-    } else if (!metrics.fireworks) {
+    } else if (!metrics.fireworks && !highlights.some(h => h === null || elapsed < h.lifeTime)) {
         return;
     }
 
@@ -239,6 +245,7 @@ const renderLoop = function(timestamp) {
 
     const categoriesAlpha = new Array(data.categories.length).fill(0);
     const alphaIncrement = 1 / data.teams.length;
+    const highlightArea = highlightAreaFactor * scoreColumnWidth;
 
     for (let t = 0; t < data.teams.length; ++t) {
 
@@ -254,12 +261,29 @@ const renderLoop = function(timestamp) {
 
         let scoreColumnLeft = left + scoreColumnWidth;
 
+        const highlight = highlights[t];
+        if (highlight !== null && elapsed < highlight.lifeTime) {
+
+            let alpha;
+
+            if (elapsed < highlight.expandTime) {
+                alpha = 1.0 - (highlight.expandTime - elapsed) / highlightsExpandTime;
+            } else {
+                alpha = (highlight.lifeTime - elapsed) / highlightsLifeTime;
+            }
+            ctx.fillStyle = highlightStub + alpha + ")";
+            ctx.fillRect(scoreColumnLeft - highlightArea,
+                bottom + highlightArea,
+                scoreColumnWidth + 2 * highlightArea,
+                highlight.height - 2 * highlightArea);
+        }
+
         for (let c = 0; cntn && c < data.categories.length; ++c) {
 
             ctx.fillStyle = "rgb(255," + (128 + c * 128 / data.categories.length) + ",0)";
             nextScore = score + data.scores[c][t];
 
-            if (nextScore >= animationStepPts) {
+            if (nextScore > animationStepPts) {
                 categoriesAlpha[c] += ((animationStepPts - score) / data.scores[c][t]) * alphaIncrement;
                 nextScore = animationStepPts;
                 cntn = false;
@@ -276,6 +300,10 @@ const renderLoop = function(timestamp) {
 
             score = nextScore;
             bottom = nextBottom;
+
+            if (cntn && c == data.categories.length - 1 && highlight === null) {
+                createHighlight(elapsed, t, nextBottom - scoresSectionBottom);
+            }
         }
 
         ctx.font = metrics.scoresFont;
@@ -294,6 +322,7 @@ const renderLoop = function(timestamp) {
             categoriesSectionWidth);
     }
 
+    // fireworks
     if (metrics.fireworks && animationStepPts >= data.maxScore) {
 
         if (fireworks === undefined) {
@@ -421,6 +450,7 @@ const loadData = function() {
     metrics.animationSteps = data.totalScores.sort((a,b) => a - b);
     metrics.winnerRevealTime = winnerRevealTimeFactor * metrics.totalDuration;
     metrics.timePerTeam = metrics.winnerRevealTime / (data.teams.length - 1);
+    highlights = new Array(data.teams.length).fill(null);
 }
 
 const decodeData = function(/** @type{String} */ data) {
@@ -517,6 +547,15 @@ const createFirework = function(elapsed, i) {
         radius: fireworksRadiusMin + Math.random() * fireworksRadiusWindow,
         particles: Math.round(fireworksParticlesMin + Math.random() * fireworksParticlesWindow),
         color: Math.random() * 360
+    };
+}
+
+const createHighlight = function(elapsed, i, height) {
+
+    highlights[i] = {
+        expandTime: elapsed + highlightsExpandTime,
+        lifeTime: elapsed + highlightsLifeTime,
+        height: height
     };
 }
 

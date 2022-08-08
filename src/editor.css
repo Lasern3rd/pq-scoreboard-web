@@ -12,6 +12,10 @@ td div {
     white-space: nowrap;
     overflow: hidden;
 }
+td input {
+    margin-left: 5px;
+    float: right;
+}
 
 .tableHeader {
     background: #b35900;
@@ -135,6 +139,11 @@ div[valid="false"] {
     margin-left: 10px;
     color: #FFFFFF;
     text-align: right;
+}
+
+.windowBody {
+    margin: 10px;
+    color: #FFFFFF;
 }
 
 .primaryWindowButton, .secondaryWindowButton {

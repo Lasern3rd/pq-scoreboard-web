@@ -3,8 +3,12 @@ const resultsWindowName = "pq_scoreboard_results_window";
 const windowBackgroundOverlay = document.getElementById('window_background_overlay');
 const addTeamWindow = document.getElementById('add_team_window');
 const addTeamEditText = document.getElementById('add_team_edit_text');
+const removeTeamWindow = document.getElementById('remove_team_window');
+const removeTeamText = document.getElementById('remove_team_text');
 const addCategoryWindow = document.getElementById('add_category_window');
 const addCategoryEditText = document.getElementById('add_category_edit_text');
+const removeCategoryWindow = document.getElementById('remove_category_window');
+const removeCategoryText = document.getElementById('remove_category_text');
 const showResultsWindow = document.getElementById('show_results_window');
 const durationEditText = document.getElementById('duration_edit_text');
 const fireworksCheckBox = document.getElementById('fireworks_check_box');
@@ -41,14 +45,38 @@ const closeAddTeamWindow = function(/** @type{Boolean} */ add) {
 
     if (add) {
 
-        let team = addTeamEditText.value;
+        const team = addTeamEditText.value;
 
-        insertHeaderCell(editorTable.rows[0], team, true);
+        const index = editorTable.rows[0].cells.length;
+        insertHeaderCell(editorTable.rows[0], team, true, () => showRemoveTeamWindow(index));
 
         insertConstDataCell(totalScoresRow, "0");
 
         for (let i = editorTable.rows.length - 2; i > 0; --i) {
             insertDataCell(editorTable.rows[i]);
+        }
+    }
+};
+
+const showRemoveTeamWindow = function(/** @type{Number} */ index) {
+
+    removeTeamWindow.data = index;
+    const teamName = editorTable.rows[0].cells[index].children[1].textContent;
+    removeTeamText.textContent = "remove team \"" + teamName + "\"?";
+    toggleOverlay(true, removeTeamWindow);
+    removeTeamWindow.focus();
+};
+
+const closeRemoveTeamWindow = function(/** @type{Boolean} */ remove) {
+
+    toggleOverlay(false, removeTeamWindow);
+
+    if (remove) {
+
+        const index = removeTeamWindow.data;
+
+        for (let i = editorTable.rows.length - 1; i >= 0; --i) {
+            editorTable.rows[i].deleteCell(index);
         }
     }
 };
@@ -68,13 +96,34 @@ const closeAddCategoryWindow = function(/** @type{Boolean} */ add) {
 
         let category = addCategoryEditText.value;
 
-        let row = editorTable.insertRow(editorTable.rows.length - 1);
+        const index = editorTable.rows.length - 1;
+        let row = editorTable.insertRow(index);
 
-        insertHeaderCell(row, category, true);
+        insertHeaderCell(row, category, true, () => showRemoveCategoryWindow(index));
 
         for (let i = editorTable.rows[0].cells.length - 2; i >= 0; --i) {
             insertDataCell(row);
         }
+    }
+};
+
+const showRemoveCategoryWindow = function(/** @type{Number} */ index) {
+
+    removeCategoryWindow.data = index;
+    const category = editorTable.rows[index].cells[0].children[1].textContent;
+    removeCategoryText.textContent = "remove category \"" + category + "\"?";
+    toggleOverlay(true, removeCategoryWindow);
+    removeCategoryWindow.focus();
+};
+
+const closeRemoveCategoryWindow = function(/** @type{Boolean} */ remove) {
+
+    toggleOverlay(false, removeCategoryWindow);
+
+    if (remove) {
+
+        const index = removeCategoryWindow.data;
+        editorTable.deleteRow(index);
     }
 };
 
@@ -114,34 +163,48 @@ const closeResultsWindow = function() {
 }
 
 const insertCell = function(/** @type{HTMLTableRowElement} */ row,
-                            /** @type{Boolean} */ editable) {
+                            /** @type{String} */ data,
+                            /** @type{Boolean} */ editable,
+                            /** @type{String} */ cls,
+                            /** @type{function} */ removeButtonAction) {
 
-    let cell = row.insertCell();
-    let contentElement = document.createElement("div");
+    const cell = row.insertCell();
+
+    cell.setAttribute("class", cls);
+
+    const contentElement = document.createElement("div");
+    contentElement.textContent = data;
     if (editable) {
         contentElement.setAttribute("contenteditable", true);
     }
+
+    if (removeButtonAction !== undefined) {
+        const removeButtom = document.createElement("input");
+        removeButtom.setAttribute("type", "image");
+        removeButtom.setAttribute("src", "delete.svg");
+        removeButtom.onclick = removeButtonAction;
+        cell.appendChild(removeButtom);
+    }
+
     cell.appendChild(contentElement);
+
     return contentElement;
 }
 
 const insertHeaderCell = function(/** @type{HTMLTableRowElement} */ row,
                                   /** @type{String} */ data,
-                                  /** @type{Boolean} */ editable) {
+                                  /** @type{Boolean} */ editable,
+                                  /** @type{function} */ removeButtonAction) {
 
-    let contentElement = insertCell(row, editable);
-    contentElement.textContent = data;
-    contentElement.setAttribute("class", "tableHeader");
-    return contentElement;
+    return insertCell(row, data, editable, "tableHeader", removeButtonAction);
 }
 
 const insertDataCell = function(/** @type{HTMLTableRowElement} */ row,
                                 /** @type{String} */ data = "") {
 
     let columnId = row.cells.length;
-    let contentElement = insertCell(row, true);
-    contentElement.textContent = data;
-    contentElement.setAttribute("class", "tableData");
+    let contentElement = insertCell(row, data, true, "tableData");
+
     contentElement.addEventListener("input", function() {
             let score = 0;
             for (let r = editorTable.rows.length - 2; r > 0; --r) {
@@ -162,10 +225,7 @@ const insertDataCell = function(/** @type{HTMLTableRowElement} */ row,
 const insertConstDataCell = function(/** @type{HTMLTableRowElement} */ row,
                                      /** @type{String} */ data) {
 
-    let contentElement = insertCell(row, false);
-    contentElement.textContent = data;
-    contentElement.setAttribute("class", "tableConstData");
-    return contentElement;
+    return insertCell(row, data, false, "tableConstData");
 }
 
 const createDataObject = function() {
@@ -178,11 +238,11 @@ const createDataObject = function() {
     let scores = [];
 
     for (let c = 1; c < cols; ++c) {
-        teams.push(editorTable.rows[0].cells[c].children[0].textContent);
+        teams.push(editorTable.rows[0].cells[c].children[1].textContent);
     }
 
     for (let r = 1; r < rows - 1; ++r) {
-        categories.push(editorTable.rows[r].cells[0].children[0].textContent);
+        categories.push(editorTable.rows[r].cells[0].children[1].textContent);
 
         let scoresRow = [];
 
@@ -214,16 +274,20 @@ const loadDataObject = function(data) {
     // todo: check all rows
 
     for (const team of data.teams) {
-        insertHeaderCell(editorTable.rows[0], team, true);
+        const index = editorTable.rows[0].cells.length;
+        insertHeaderCell(editorTable.rows[0], team, true,
+            () => showRemoveTeamWindow(index));
     }
 
     let totalScores = new Array(data.teams.length).fill(0);
 
     for (let i = 0; i < data.categories.length; ++i) {
 
-        let row = editorTable.insertRow(editorTable.rows.length - 1);
+        const index = editorTable.rows.length - 1;
+        let row = editorTable.insertRow(index);
 
-        insertHeaderCell(row, data.categories[i], true);
+        insertHeaderCell(row, data.categories[i], true,
+            () => showRemoveCategoryWindow(index));
 
         for (let j = 0; j < data.teams.length; ++j) {
             insertDataCell(row, "" + data.scores[i][j]);
